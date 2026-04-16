@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+#MISE description="Search across accessible knowledge sources"
+#USAGE arg "<query>..." var=#true help="Search query"
+#USAGE flag "--source <source>" var=#true help="Limit search to one or more sources (repo, zettel, fold, den, human)"
+#USAGE example "search obfuscation" header="Search default sources"
+#USAGE example "search --source fold obfuscation" header="Search only fold"
+#USAGE example "search source:list" header="List available sources"
+set -euo pipefail
+
+source "$MISE_CONFIG_ROOT/lib/common.sh"
+source "$MISE_CONFIG_ROOT/lib/search.sh"
+
+QUERY_WORDS=()
+if [ -n "${usage_query:-}" ]; then
+  while IFS= read -r word; do
+    QUERY_WORDS+=("$word")
+  done < <(search_parse_words "$usage_query")
+fi
+
+SOURCE_NAMES=()
+if [ -n "${usage_source:-}" ]; then
+  while IFS= read -r source_name; do
+    SOURCE_NAMES+=("$source_name")
+  done < <(search_parse_words "$usage_source")
+fi
+
+if [ ${#QUERY_WORDS[@]} -eq 1 ] && [ "${QUERY_WORDS[0]}" = "source:list" ] && [ ${#SOURCE_NAMES[@]} -eq 0 ]; then
+  found_any=false
+  printf '%-10s %s\n' SOURCE PATH
+
+  while IFS='|' read -r source_name source_path; do
+    found_any=true
+    printf '%-10s %s\n' "$source_name" "$source_path"
+  done < <(search_available_sources)
+
+  if [ "$found_any" != "true" ]; then
+    echo "search: no sources are currently available" >&2
+    exit 1
+  fi
+
+  exit 0
+fi
+
+if [ ${#QUERY_WORDS[@]} -eq 0 ]; then
+  echo "search: query is required" >&2
+  exit 1
+fi
+
+if [ ${#SOURCE_NAMES[@]} -eq 0 ]; then
+  while IFS='|' read -r source_name _source_path; do
+    SOURCE_NAMES+=("$source_name")
+  done < <(search_available_sources)
+fi
+
+if [ ${#SOURCE_NAMES[@]} -eq 0 ]; then
+  echo "search: no searchable sources are available" >&2
+  exit 1
+fi
+
+QUERY="${QUERY_WORDS[*]}"
+HAD_RESULTS=false
+
+for source_name in "${SOURCE_NAMES[@]}"; do
+  if ! search_known_source "$source_name"; then
+    echo "search: unknown source '$source_name'" >&2
+    echo "search: run 'search source:list' to see available sources" >&2
+    exit 1
+  fi
+
+  source_path="$(search_source_path "$source_name")"
+  if [ -z "$source_path" ] || [ ! -e "$source_path" ]; then
+    echo "search: source '$source_name' is not available" >&2
+    exit 1
+  fi
+
+  if search_run_source "$source_name" "$source_path" "$QUERY"; then
+    HAD_RESULTS=true
+  fi
+done
+
+if [ "$HAD_RESULTS" != "true" ]; then
+  echo "search: no results for '$QUERY'" >&2
+  exit 1
+fi
