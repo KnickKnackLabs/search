@@ -8,7 +8,7 @@ Local notes, web results, GitHub issues, pull requests, and code search — one 
 
 ![shell: bash](https://img.shields.io/badge/shell-bash-4EAA25?style=flat&logo=gnubash&logoColor=white)
 [![runtime: mise](https://img.shields.io/badge/runtime-mise-7c3aed?style=flat)](https://mise.jdx.dev)
-![tests: 14 passing](https://img.shields.io/badge/tests-14%20passing-brightgreen?style=flat)
+![tests: 15 passing](https://img.shields.io/badge/tests-15%20passing-brightgreen?style=flat)
 ![providers: 5](https://img.shields.io/badge/providers-5-blue?style=flat)
 
 </div>
@@ -95,7 +95,7 @@ mise run test
 readme build --check
 ```
 
-Tests use [BATS](https://github.com/bats-core/bats-core) — 14 tests across 1 suite.
+Tests use [BATS](https://github.com/bats-core/bats-core) — 15 tests across 1 suite.
 
 <div align="center">
 

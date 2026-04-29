@@ -122,6 +122,15 @@ MOCK
   [[ "$output" != *"== web =="* ]]
 }
 
+@test "all selected providers continue after no-result providers" {
+  run search all --notes --web unique-web-only
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"== notes =="* ]]
+  [[ "$output" == *"no notes results"* ]]
+  [[ "$output" == *"== web =="* ]]
+  [[ "$output" == *"[web] First Result Title"* ]]
+}
+
 @test "all supports provider-prefixed overrides" {
   run search all --notes --notes-limit 1 notes
   [ "$status" -eq 0 ]

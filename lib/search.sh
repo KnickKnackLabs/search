@@ -74,6 +74,13 @@ search_require_query() {
   fi
 }
 
+search_is_no_results_status() {
+  case "$1" in
+    10) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 search_validate_limit() {
   local limit="$1"
   local provider="$2"
@@ -219,7 +226,7 @@ EOF
 
   if [ "$had_results" != "true" ]; then
     echo "search: no notes results for '$query'" >&2
-    return 1
+    return 10
   fi
 }
 
@@ -319,7 +326,7 @@ search_web() {
 
   if [ "$count" = "0" ]; then
     echo "search: no web results for '$query'" >&2
-    return 1
+    return 10
   fi
 
   printf '%s\n' "$results" | ${JQ:-jq} -r '
@@ -417,7 +424,7 @@ search_github() {
 
   if [ -z "$output" ]; then
     echo "search: no $provider results for '$query'" >&2
-    return 1
+    return 10
   fi
 
   printf '%s\n' "$output"
@@ -560,7 +567,7 @@ search_all() {
 
     if [ "$status" -eq 0 ]; then
       had_results=true
-    elif [ "$selected_any" = "true" ]; then
+    elif ! search_is_no_results_status "$status"; then
       return "$status"
     fi
     printf '\n'
@@ -568,7 +575,7 @@ search_all() {
 
   if [ "$had_results" != "true" ]; then
     echo "search: no results for '$query'" >&2
-    return 1
+    return 10
   fi
 }
 
