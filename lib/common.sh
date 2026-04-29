@@ -12,6 +12,21 @@ search_parse_words() {
   printf '%s' "$raw" | xargs printf '%s\n'
 }
 
+search_join_args() {
+  local result=""
+  local arg
+
+  for arg in "$@"; do
+    if [ -z "$result" ]; then
+      result="$arg"
+    else
+      result="$result $arg"
+    fi
+  done
+
+  printf '%s\n' "$result"
+}
+
 search_agent_root() {
   if [ -n "${SEARCH_AGENT_ROOT:-}" ]; then
     printf '%s\n' "$SEARCH_AGENT_ROOT"
@@ -26,6 +41,44 @@ search_agent_root() {
   return 1
 }
 
+search_env_name() {
+  local provider="$1"
+  local variable="$2"
+  local provider_upper
+  local variable_upper
+
+  provider_upper="$(printf '%s' "$provider" | tr '[:lower:]-' '[:upper:]_')"
+  variable_upper="$(printf '%s' "$variable" | tr '[:lower:]-' '[:upper:]_')"
+  printf 'SEARCH_%s_%s\n' "$provider_upper" "$variable_upper"
+}
+
+search_env_get() {
+  local provider="$1"
+  local variable="$2"
+  local env_name
+
+  env_name="$(search_env_name "$provider" "$variable")"
+  eval "printf '%s\\n' \"\${$env_name:-}\""
+}
+
+search_default_limit() {
+  local provider="$1"
+  local fallback="$2"
+  local configured
+
+  configured="$(search_env_get "$provider" limit)"
+  if [ -n "$configured" ]; then
+    printf '%s\n' "$configured"
+  else
+    printf '%s\n' "$fallback"
+  fi
+}
+
+search_default_repo() {
+  local provider="$1"
+  search_env_get "$provider" default_repo
+}
+
 search_source_path() {
   local source_name="$1"
   local agent_root=""
@@ -34,11 +87,17 @@ search_source_path() {
     repo)
       printf '%s\n' "${SEARCH_SOURCE_REPO:-${CALLER_PWD:-}}"
       ;;
-    zettel)
-      if [ -n "${SEARCH_SOURCE_ZETTEL:-}" ]; then
+    home|zettel)
+      if [ -n "${SEARCH_SOURCE_HOME:-}" ]; then
+        printf '%s\n' "$SEARCH_SOURCE_HOME"
+      elif [ -n "${SEARCH_SOURCE_ZETTEL:-}" ]; then
         printf '%s\n' "$SEARCH_SOURCE_ZETTEL"
       elif agent_root="$(search_agent_root 2>/dev/null)"; then
-        printf '%s\n' "$agent_root/zettelkasten"
+        if [ -e "$agent_root/home" ]; then
+          printf '%s\n' "$agent_root/home"
+        else
+          printf '%s\n' "$agent_root/zettelkasten"
+        fi
       fi
       ;;
     fold)
@@ -70,18 +129,18 @@ search_source_path() {
   esac
 }
 
-search_known_source() {
+search_known_note_source() {
   case "$1" in
-    repo|zettel|fold|den|human) return 0 ;;
+    repo|home|zettel|fold|den|human) return 0 ;;
     *) return 1 ;;
   esac
 }
 
-search_available_sources() {
+search_available_note_sources() {
   local source_name
   local source_path
 
-  for source_name in repo zettel fold den human; do
+  for source_name in repo home fold den human; do
     source_path="$(search_source_path "$source_name" 2>/dev/null || true)"
 
     if [ -n "$source_path" ] && [ -e "$source_path" ]; then
