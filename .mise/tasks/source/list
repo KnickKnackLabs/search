@@ -1,18 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="List currently available search sources"
+#MISE description="List currently available search providers"
 set -euo pipefail
 
-source "$MISE_CONFIG_ROOT/lib/common.sh"
-
-found_any=false
-printf '%-10s %s\n' SOURCE PATH
-
-while IFS='|' read -r source_name source_path; do
-  found_any=true
-  printf '%-10s %s\n' "$source_name" "$source_path"
-done < <(search_available_sources)
-
-if [ "$found_any" != "true" ]; then
-  echo "search: no sources are currently available" >&2
-  exit 1
-fi
+exec mise run search providers
