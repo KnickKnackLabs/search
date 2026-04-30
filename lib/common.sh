@@ -79,13 +79,28 @@ search_default_repo() {
   search_env_get "$provider" default_repo
 }
 
+search_caller_git_root() {
+  local caller_dir="${CALLER_PWD:-}"
+
+  if [ -z "$caller_dir" ] || [ ! -d "$caller_dir" ]; then
+    return 1
+  fi
+
+  git -C "$caller_dir" rev-parse --show-toplevel 2>/dev/null
+}
+
 search_source_path() {
   local source_name="$1"
   local agent_root=""
+  local git_root=""
 
   case "$source_name" in
     repo)
-      printf '%s\n' "${SEARCH_SOURCE_REPO:-${CALLER_PWD:-}}"
+      if [ -n "${SEARCH_SOURCE_REPO:-}" ]; then
+        printf '%s\n' "$SEARCH_SOURCE_REPO"
+      elif git_root="$(search_caller_git_root)"; then
+        printf '%s\n' "$git_root"
+      fi
       ;;
     home|zettel)
       if [ -n "${SEARCH_SOURCE_HOME:-}" ]; then

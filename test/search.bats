@@ -99,6 +99,31 @@ MOCK
   [[ "$output" == *"[notes:human] HUMAN.md:"* ]]
 }
 
+@test "repo source resolves to caller git root" {
+  unset SEARCH_SOURCE_REPO
+  local git_repo="$BATS_TEST_TMPDIR/git-repo"
+  mkdir -p "$git_repo/nested/deep"
+  git -C "$git_repo" init -q
+  cat > "$git_repo/root-note.md" <<'EOF'
+git-root-only-token
+EOF
+
+  export CALLER_PWD="$git_repo/nested/deep"
+  run search notes --source repo git-root-only-token
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"[notes:repo] root-note.md:"* ]]
+}
+
+@test "repo source is unavailable outside a git repo without override" {
+  unset SEARCH_SOURCE_REPO
+  mkdir -p "$BATS_TEST_TMPDIR/not-a-repo"
+  export CALLER_PWD="$BATS_TEST_TMPDIR/not-a-repo"
+
+  run search notes --source repo notes
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"notes source 'repo' is not available"* ]]
+}
+
 @test "notes limit caps local results" {
   run search notes --limit 1 notes
   [ "$status" -eq 0 ]
