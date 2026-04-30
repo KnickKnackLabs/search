@@ -6,8 +6,6 @@ load ./test_helper.bash
 setup() {
   export CALLER_PWD="$BATS_TEST_TMPDIR/repo"
   export SEARCH_AGENT_ROOT="$BATS_TEST_TMPDIR/agent"
-  export SEARCH_SOURCE_REPO="$CALLER_PWD"
-  export SEARCH_SOURCE_DEN="$BATS_TEST_TMPDIR/missing-den"
   export HUMAN_MD="$BATS_TEST_TMPDIR/HUMAN.md"
   export BRAVE_SEARCH_API_KEY="test-key-123"
   export CURL="$BATS_TEST_TMPDIR/bin/curl"
@@ -20,8 +18,7 @@ setup() {
   unset SEARCH_ISSUES_LIMIT
 
   mkdir -p "$CALLER_PWD"
-  mkdir -p "$SEARCH_AGENT_ROOT/home"
-  mkdir -p "$SEARCH_AGENT_ROOT/fold/notes"
+  mkdir -p "$SEARCH_AGENT_ROOT/home/modules/fold/notes"
   mkdir -p "$BATS_TEST_TMPDIR/bin"
 
   cat > "$CALLER_PWD/README.md" <<'EOF'
@@ -36,7 +33,7 @@ EOF
 Need to follow up on provider namespaces later.
 EOF
 
-  cat > "$SEARCH_AGENT_ROOT/fold/notes/obfuscation.md" <<'EOF'
+  cat > "$SEARCH_AGENT_ROOT/home/modules/fold/notes/obfuscation.md" <<'EOF'
 # Obfuscation
 
 Run notes setup and notes unlock before trying to read encrypted notes.
@@ -96,32 +93,19 @@ MOCK
   run search notes obfuscation
   [ "$status" -eq 0 ]
   [[ "$output" == *"[notes:fold] notes/obfuscation.md:"* ]]
-  [[ "$output" == *"[notes:human] HUMAN.md:"* ]]
+  [[ "$output" != *"[human]"* ]]
 }
 
-@test "repo source resolves to caller git root" {
-  unset SEARCH_SOURCE_REPO
-  local git_repo="$BATS_TEST_TMPDIR/git-repo"
-  mkdir -p "$git_repo/nested/deep"
-  git -C "$git_repo" init -q
-  cat > "$git_repo/root-note.md" <<'EOF'
-git-root-only-token
-EOF
-
-  export CALLER_PWD="$git_repo/nested/deep"
-  run search notes --source repo git-root-only-token
+@test "human searches HUMAN.md separately" {
+  run search human obfuscation-focused
   [ "$status" -eq 0 ]
-  [[ "$output" == *"[notes:repo] root-note.md:"* ]]
+  [[ "$output" == *"[human] HUMAN.md:"* ]]
 }
 
-@test "repo source is unavailable outside a git repo without override" {
-  unset SEARCH_SOURCE_REPO
-  mkdir -p "$BATS_TEST_TMPDIR/not-a-repo"
-  export CALLER_PWD="$BATS_TEST_TMPDIR/not-a-repo"
-
+@test "repo is not a notes source" {
   run search notes --source repo notes
   [ "$status" -ne 0 ]
-  [[ "$output" == *"notes source 'repo' is not available"* ]]
+  [[ "$output" == *"unknown notes source 'repo'"* ]]
 }
 
 @test "notes limit caps local results" {
@@ -137,6 +121,7 @@ EOF
   [[ "$output" == *"== notes =="* ]]
   [[ "$output" == *"== web =="* ]]
   [[ "$output" == *"[notes:fold]"* ]]
+  [[ "$output" != *"== human =="* ]]
   [[ "$output" == *"[web] First Result Title"* ]]
 }
 
@@ -145,6 +130,14 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" == *"== notes =="* ]]
   [[ "$output" != *"== web =="* ]]
+}
+
+@test "all can explicitly include human" {
+  run search all --human obfuscation-focused
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"== human =="* ]]
+  [[ "$output" == *"[human] HUMAN.md:"* ]]
+  [[ "$output" != *"== notes =="* ]]
 }
 
 @test "all selected providers continue after no-result providers" {
@@ -222,6 +215,7 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" == *"PROVIDER"* ]]
   [[ "$output" == *"notes"* ]]
+  [[ "$output" == *"human"* ]]
   [[ "$output" == *"web"* ]]
   [[ "$output" == *"SEARCH_ISSUES_DEFAULT_REPO"* ]]
 }

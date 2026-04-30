@@ -42,6 +42,7 @@ search_print_usage() {
 Usage:
   search all [provider flags] [provider overrides] <query>
   search notes [--limit N] [--source SOURCE] <query>
+  search human [--limit N] <query>
   search web [--limit N] [--offset N] [--json] <query>
   search issues [--limit N] [--repo OWNER/REPO] <query>
   search prs [--limit N] [--repo OWNER/REPO] <query>
@@ -49,7 +50,8 @@ Usage:
   search providers
 
 Providers:
-  notes   Local markdown sources: repo, home, fold, den, human
+  notes   Local markdown sources: home, fold, den
+  human   HUMAN.md via SEARCH_SOURCE_HUMAN or HUMAN_MD
   web     Brave Search API (BRAVE_SEARCH_API_KEY)
   issues  GitHub issues via gh search issues
   prs     GitHub pull requests via gh search prs
@@ -226,6 +228,97 @@ EOF
 
   if [ "$had_results" != "true" ]; then
     echo "search: no notes results for '$query'" >&2
+    return 10
+  fi
+}
+
+search_human() {
+  local limit
+  local query
+  local source_path
+  local output
+  local status
+  local line
+  local file_path
+  local remainder
+  local line_no
+  local text
+  local rel_path
+  local count=0
+  local had_results=false
+  local query_words=()
+
+  limit="$(search_default_limit human 20)"
+
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --help|-h)
+        search_print_usage
+        return 0
+        ;;
+      --limit|-n)
+        if [ "$#" -lt 2 ]; then
+          echo "search: --limit requires a value" >&2
+          return 1
+        fi
+        limit="$2"
+        shift 2
+        ;;
+      --)
+        shift
+        while [ "$#" -gt 0 ]; do
+          query_words+=("$1")
+          shift
+        done
+        ;;
+      -*)
+        echo "search: unknown human option '$1'" >&2
+        return 1
+        ;;
+      *)
+        query_words+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  search_validate_limit "$limit" human || return 1
+  query="$(search_join_args ${query_words[@]+"${query_words[@]}"})"
+  search_require_query human "$query" || return 1
+
+  source_path="$(search_human_path)"
+  if [ -z "$source_path" ] || [ ! -f "$source_path" ]; then
+    echo "search: human source is not available" >&2
+    return 1
+  fi
+
+  output=""
+  status=0
+  output="$(search_rg "$query" "$source_path")" || status=$?
+  if [ "$status" -ne 0 ]; then
+    if [ "$status" -ne 1 ]; then
+      return "$status"
+    fi
+  else
+    while IFS= read -r line; do
+      file_path="${line%%:*}"
+      remainder="${line#*:}"
+      line_no="${remainder%%:*}"
+      text="${remainder#*:}"
+      rel_path="$(search_relpath "$file_path" "$source_path")"
+      printf '[human] %s:%s: %s\n' "$rel_path" "$line_no" "$text"
+      had_results=true
+      count=$((count + 1))
+      if [ "$count" -ge "$limit" ]; then
+        return 0
+      fi
+    done <<EOF
+$output
+EOF
+  fi
+
+  if [ "$had_results" != "true" ]; then
+    echo "search: no human results for '$query'" >&2
     return 10
   fi
 }
@@ -438,6 +531,10 @@ search_provider_configured_for_all() {
     notes)
       return 0
       ;;
+    human)
+      [ -n "$(search_human_path)" ] && [ -f "$(search_human_path)" ] && return 0
+      return 1
+      ;;
     web)
       [ -n "${BRAVE_SEARCH_API_KEY:-}" ] && return 0
       return 1
@@ -454,6 +551,7 @@ search_provider_configured_for_all() {
 search_all() {
   local selected_any=false
   local select_notes=false
+  local select_human=false
   local select_web=false
   local select_issues=false
   local select_prs=false
@@ -464,6 +562,7 @@ search_all() {
   local status
   local query_words=()
   local notes_args=()
+  local human_args=()
   local web_args=()
   local issues_args=()
   local prs_args=()
@@ -481,6 +580,8 @@ search_all() {
         ;;
       --notes)
         select_notes=true; selected_any=true; shift ;;
+      --human)
+        select_human=true; selected_any=true; shift ;;
       --web)
         select_web=true; selected_any=true; shift ;;
       --issues)
@@ -495,6 +596,9 @@ search_all() {
       --notes-source)
         [ "$#" -ge 2 ] || { echo "search: --notes-source requires a value" >&2; return 1; }
         notes_args+=(--source "$2"); shift 2 ;;
+      --human-limit)
+        [ "$#" -ge 2 ] || { echo "search: --human-limit requires a value" >&2; return 1; }
+        human_args+=(--limit "$2"); shift 2 ;;
       --web-limit)
         [ "$#" -ge 2 ] || { echo "search: --web-limit requires a value" >&2; return 1; }
         web_args+=(--limit "$2"); shift 2 ;;
@@ -542,6 +646,7 @@ search_all() {
 
   if [ "$selected_any" = "true" ]; then
     [ "$select_notes" = "true" ] && providers+=(notes)
+    [ "$select_human" = "true" ] && providers+=(human)
     [ "$select_web" = "true" ] && providers+=(web)
     [ "$select_issues" = "true" ] && providers+=(issues)
     [ "$select_prs" = "true" ] && providers+=(prs)
@@ -559,6 +664,7 @@ search_all() {
     status=0
     case "$provider" in
       notes) search_notes ${notes_args[@]+"${notes_args[@]}"} "$query" || status=$? ;;
+      human) search_human ${human_args[@]+"${human_args[@]}"} "$query" || status=$? ;;
       web) search_web ${web_args[@]+"${web_args[@]}"} "$query" || status=$? ;;
       issues) search_github issues issues ${issues_args[@]+"${issues_args[@]}"} "$query" || status=$? ;;
       prs) search_github prs prs ${prs_args[@]+"${prs_args[@]}"} "$query" || status=$? ;;
@@ -588,6 +694,12 @@ search_providers() {
   while IFS='|' read -r source_name source_path; do
     printf '          %-8s %s\n' "$source_name" "$source_path"
   done < <(search_available_note_sources)
+
+  if [ -n "$(search_human_path)" ] && [ -f "$(search_human_path)" ]; then
+    printf 'human    %s\n' "$(search_human_path)"
+  else
+    printf 'human    missing HUMAN_MD or SEARCH_SOURCE_HUMAN\n'
+  fi
 
   if [ -n "${BRAVE_SEARCH_API_KEY:-}" ]; then
     printf 'web       configured (BRAVE_SEARCH_API_KEY set)\n'

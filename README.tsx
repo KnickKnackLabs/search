@@ -28,15 +28,15 @@ const readme = (
       </Paragraph>
 
       <Paragraph>
-        Local notes, web results, GitHub issues, pull requests, and code search —
-        one provider-shaped interface instead of another pile of one-off commands.
+        Home notes, HUMAN.md, web results, GitHub issues, pull requests, and code
+        search — one provider-shaped interface instead of another pile of one-off commands.
       </Paragraph>
 
       <Badges>
         <Badge label="shell" value="bash" color="4EAA25" logo="gnubash" logoColor="white" />
         <Badge label="runtime" value="mise" color="7c3aed" href="https://mise.jdx.dev" />
         <Badge label="tests" value={`${testCount} passing`} color="brightgreen" />
-        <Badge label="providers" value="5" color="blue" />
+        <Badge label="providers" value="6" color="blue" />
       </Badges>
     </Center>
 
@@ -49,6 +49,7 @@ const readme = (
 
       <CodeBlock lang="bash">{`search all "query"
 search notes "query"
+search human "query"
 search web "query"
 search issues --repo OWNER/REPO "query"
 search prs --repo OWNER/REPO "query"
@@ -58,7 +59,8 @@ search providers`}</CodeBlock>
 
     <Section title="Providers">
       <List>
-        <Item><Code>notes</Code> — local markdown sources: current repo, home, fold, den, and HUMAN.md when available</Item>
+        <Item><Code>notes</Code> — local markdown sources: home notes, plus fold/den modules when present</Item>
+        <Item><Code>human</Code> — Or's HUMAN.md via <Code>HUMAN_MD</Code> or <Code>SEARCH_SOURCE_HUMAN</Code></Item>
         <Item><Code>web</Code> — Brave Search API</Item>
         <Item><Code>issues</Code> — GitHub issues via <Code>gh search issues</Code></Item>
         <Item><Code>prs</Code> — GitHub pull requests via <Code>gh search prs</Code></Item>
@@ -69,9 +71,9 @@ search providers`}</CodeBlock>
     <Section title="Blended search">
       <Paragraph>
         <Code>search all</Code> runs configured providers. Local notes are always
-        included. Web is included when <Code>BRAVE_SEARCH_API_KEY</Code> is set.
-        GitHub providers are included when they have a default repo configured or
-        a repo override is supplied.
+        included. HUMAN.md is opt-in with <Code>--human</Code>. Web is included
+        when <Code>BRAVE_SEARCH_API_KEY</Code> is set. GitHub providers are
+        included when they have a default repo configured or a repo override is supplied.
       </Paragraph>
 
       <CodeBlock lang="bash">{`# Search every configured provider
@@ -79,6 +81,7 @@ search all "modules init"
 
 # Provider flags select only those providers
 search all --notes --issues "explicit model"
+search all --human "obfuscated home"
 
 # Provider-prefixed overrides configure individual providers
 search all --notes-limit 3 "frontmatter"
@@ -97,6 +100,7 @@ search all --issues --issues-repo KnickKnackLabs/shimmer --issues-limit 5 "model
       </Paragraph>
 
       <CodeBlock lang="bash">{`SEARCH_NOTES_LIMIT=5 search notes "query"
+SEARCH_HUMAN_LIMIT=5 search human "query"
 SEARCH_WEB_LIMIT=3 search web "query"
 SEARCH_ISSUES_DEFAULT_REPO=KnickKnackLabs/shimmer search issues "model plumbing"
 SEARCH_PRS_DEFAULT_REPO=KnickKnackLabs/search search prs "provider"
@@ -114,13 +118,16 @@ search web --limit 5 "mise tasks"
 search web --json "mise tasks"`}</CodeBlock>
     </Section>
 
-    <Section title="Local notes">
-      <CodeBlock lang="bash">{`search notes --source fold "modules init"
-search notes --source human "obfuscated home"
-search notes --limit 3 "frontmatter"`}</CodeBlock>
+    <Section title="Local notes and HUMAN.md">
+      <CodeBlock lang="bash">{`search notes "frontmatter"
+search notes --source fold "modules init"
+search human "obfuscated home"`}</CodeBlock>
 
       <Paragraph>
-        Available sources are shown by <Code>search providers</Code>.
+        <Code>notes</Code> searches markdown in the agent's home and any available
+        home modules. <Code>human</Code> is separate so async instructions do not
+        silently mix into ordinary note searches. Available sources are shown by{" "}
+        <Code>search providers</Code>.
       </Paragraph>
     </Section>
 

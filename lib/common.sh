@@ -79,63 +79,61 @@ search_default_repo() {
   search_env_get "$provider" default_repo
 }
 
-search_caller_git_root() {
-  local caller_dir="${CALLER_PWD:-}"
+search_agent_home() {
+  local agent_root=""
 
-  if [ -z "$caller_dir" ] || [ ! -d "$caller_dir" ]; then
-    return 1
+  if [ -n "${SEARCH_SOURCE_HOME:-}" ]; then
+    printf '%s\n' "$SEARCH_SOURCE_HOME"
+    return 0
   fi
 
-  git -C "$caller_dir" rev-parse --show-toplevel 2>/dev/null
+  if [ -n "${SEARCH_SOURCE_ZETTEL:-}" ]; then
+    printf '%s\n' "$SEARCH_SOURCE_ZETTEL"
+    return 0
+  fi
+
+  if agent_root="$(search_agent_root 2>/dev/null)"; then
+    if [ -e "$agent_root/home" ]; then
+      printf '%s\n' "$agent_root/home"
+    else
+      printf '%s\n' "$agent_root/zettelkasten"
+    fi
+    return 0
+  fi
+
+  return 1
+}
+
+search_human_path() {
+  if [ -n "${SEARCH_SOURCE_HUMAN:-}" ]; then
+    printf '%s\n' "$SEARCH_SOURCE_HUMAN"
+  elif [ -n "${HUMAN_MD:-}" ]; then
+    printf '%s\n' "$HUMAN_MD"
+  elif [ -f "$HOME/agents/or/home/notes/HUMAN.md" ]; then
+    printf '%s\n' "$HOME/agents/or/home/notes/HUMAN.md"
+  fi
 }
 
 search_source_path() {
   local source_name="$1"
-  local agent_root=""
-  local git_root=""
+  local home_path=""
 
   case "$source_name" in
-    repo)
-      if [ -n "${SEARCH_SOURCE_REPO:-}" ]; then
-        printf '%s\n' "$SEARCH_SOURCE_REPO"
-      elif git_root="$(search_caller_git_root)"; then
-        printf '%s\n' "$git_root"
-      fi
-      ;;
     home|zettel)
-      if [ -n "${SEARCH_SOURCE_HOME:-}" ]; then
-        printf '%s\n' "$SEARCH_SOURCE_HOME"
-      elif [ -n "${SEARCH_SOURCE_ZETTEL:-}" ]; then
-        printf '%s\n' "$SEARCH_SOURCE_ZETTEL"
-      elif agent_root="$(search_agent_root 2>/dev/null)"; then
-        if [ -e "$agent_root/home" ]; then
-          printf '%s\n' "$agent_root/home"
-        else
-          printf '%s\n' "$agent_root/zettelkasten"
-        fi
-      fi
+      search_agent_home
       ;;
     fold)
       if [ -n "${SEARCH_SOURCE_FOLD:-}" ]; then
         printf '%s\n' "$SEARCH_SOURCE_FOLD"
-      elif agent_root="$(search_agent_root 2>/dev/null)"; then
-        printf '%s\n' "$agent_root/fold"
+      elif home_path="$(search_agent_home 2>/dev/null)"; then
+        printf '%s\n' "$home_path/modules/fold"
       fi
       ;;
     den)
       if [ -n "${SEARCH_SOURCE_DEN:-}" ]; then
         printf '%s\n' "$SEARCH_SOURCE_DEN"
-      elif agent_root="$(search_agent_root 2>/dev/null)"; then
-        printf '%s\n' "$agent_root/den"
-      fi
-      ;;
-    human)
-      if [ -n "${SEARCH_SOURCE_HUMAN:-}" ]; then
-        printf '%s\n' "$SEARCH_SOURCE_HUMAN"
-      elif [ -n "${HUMAN_MD:-}" ]; then
-        printf '%s\n' "$HUMAN_MD"
-      elif [ -f "$HOME/agents/or/home/notes/HUMAN.md" ]; then
-        printf '%s\n' "$HOME/agents/or/home/notes/HUMAN.md"
+      elif home_path="$(search_agent_home 2>/dev/null)"; then
+        printf '%s\n' "$home_path/modules/den"
       fi
       ;;
     *)
@@ -146,7 +144,7 @@ search_source_path() {
 
 search_known_note_source() {
   case "$1" in
-    repo|home|zettel|fold|den|human) return 0 ;;
+    home|zettel|fold|den) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -155,7 +153,7 @@ search_available_note_sources() {
   local source_name
   local source_path
 
-  for source_name in repo home fold den human; do
+  for source_name in home fold den; do
     source_path="$(search_source_path "$source_name" 2>/dev/null || true)"
 
     if [ -n "$source_path" ] && [ -e "$source_path" ]; then

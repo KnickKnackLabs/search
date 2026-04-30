@@ -22,6 +22,9 @@ case "$command" in
   notes)
     search_notes "$@"
     ;;
+  human)
+    search_human "$@"
+    ;;
   web)
     search_web "$@"
     ;;
