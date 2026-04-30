@@ -115,13 +115,14 @@ MOCK
   [ "$result_count" -eq 1 ]
 }
 
-@test "all searches notes and configured web by default" {
+@test "all searches configured providers by default" {
   run search all obfuscation
   [ "$status" -eq 0 ]
   [[ "$output" == *"== notes =="* ]]
+  [[ "$output" == *"== human =="* ]]
   [[ "$output" == *"== web =="* ]]
   [[ "$output" == *"[notes:fold]"* ]]
-  [[ "$output" != *"== human =="* ]]
+  [[ "$output" == *"[human] HUMAN.md:"* ]]
   [[ "$output" == *"[web] First Result Title"* ]]
 }
 
@@ -132,7 +133,7 @@ MOCK
   [[ "$output" != *"== web =="* ]]
 }
 
-@test "all can explicitly include human" {
+@test "all can explicitly select only human" {
   run search all --human obfuscation-focused
   [ "$status" -eq 0 ]
   [[ "$output" == *"== human =="* ]]

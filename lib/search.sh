@@ -50,7 +50,7 @@ Usage:
   search providers
 
 Providers:
-  notes   Local markdown sources: home, fold, den
+  notes   Local markdown sources: home plus home/modules/*
   human   HUMAN.md via SEARCH_SOURCE_HUMAN or HUMAN_MD
   web     Brave Search API (BRAVE_SEARCH_API_KEY)
   issues  GitHub issues via gh search issues
@@ -653,6 +653,7 @@ search_all() {
     [ "$select_code" = "true" ] && providers+=(code)
   else
     providers+=(notes)
+    search_provider_configured_for_all human "" && providers+=(human)
     search_provider_configured_for_all web "" && providers+=(web)
     search_provider_configured_for_all issues "$issues_repo_arg" && providers+=(issues)
     search_provider_configured_for_all prs "$prs_repo_arg" && providers+=(prs)

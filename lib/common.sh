@@ -114,50 +114,61 @@ search_human_path() {
   fi
 }
 
+search_module_path() {
+  local module_name="$1"
+  local home_path=""
+
+  if home_path="$(search_agent_home 2>/dev/null)"; then
+    printf '%s\n' "$home_path/modules/$module_name"
+  fi
+}
+
 search_source_path() {
   local source_name="$1"
-  local home_path=""
 
   case "$source_name" in
     home|zettel)
       search_agent_home
       ;;
-    fold)
-      if [ -n "${SEARCH_SOURCE_FOLD:-}" ]; then
-        printf '%s\n' "$SEARCH_SOURCE_FOLD"
-      elif home_path="$(search_agent_home 2>/dev/null)"; then
-        printf '%s\n' "$home_path/modules/fold"
-      fi
-      ;;
-    den)
-      if [ -n "${SEARCH_SOURCE_DEN:-}" ]; then
-        printf '%s\n' "$SEARCH_SOURCE_DEN"
-      elif home_path="$(search_agent_home 2>/dev/null)"; then
-        printf '%s\n' "$home_path/modules/den"
-      fi
-      ;;
     *)
-      return 1
+      search_module_path "$source_name"
       ;;
   esac
 }
 
 search_known_note_source() {
-  case "$1" in
-    home|zettel|fold|den) return 0 ;;
-    *) return 1 ;;
+  local source_name="$1"
+  local source_path=""
+
+  case "$source_name" in
+    repo|human)
+      return 1
+      ;;
+    home|zettel)
+      return 0
+      ;;
+    *)
+      source_path="$(search_module_path "$source_name" 2>/dev/null || true)"
+      [ -n "$source_path" ] && [ -e "$source_path" ]
+      ;;
   esac
 }
 
 search_available_note_sources() {
-  local source_name
-  local source_path
+  local home_path=""
+  local module_dir=""
+  local module_name=""
 
-  for source_name in home fold den; do
-    source_path="$(search_source_path "$source_name" 2>/dev/null || true)"
+  home_path="$(search_agent_home 2>/dev/null || true)"
+  if [ -n "$home_path" ] && [ -e "$home_path" ]; then
+    printf 'home|%s\n' "$home_path"
+  fi
 
-    if [ -n "$source_path" ] && [ -e "$source_path" ]; then
-      printf '%s|%s\n' "$source_name" "$source_path"
-    fi
-  done
+  if [ -n "$home_path" ] && [ -d "$home_path/modules" ]; then
+    for module_dir in "$home_path"/modules/*; do
+      [ -d "$module_dir" ] || continue
+      module_name="$(basename "$module_dir")"
+      printf '%s|%s\n' "$module_name" "$module_dir"
+    done
+  fi
 }

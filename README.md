@@ -30,7 +30,7 @@ search providers
 
 ## Providers
 
-- `notes` — local markdown sources: home notes, plus fold/den modules when present
+- `notes` — local markdown sources: home notes, plus discovered `home/modules/*` modules
 - `human` — Or's HUMAN.md via `HUMAN_MD` or `SEARCH_SOURCE_HUMAN`
 - `web` — Brave Search API
 - `issues` — GitHub issues via `gh search issues`
@@ -39,7 +39,7 @@ search providers
 
 ## Blended search
 
-`search all` runs configured providers. Local notes are always included. HUMAN.md is opt-in with `--human`. Web is included when `BRAVE_SEARCH_API_KEY` is set. GitHub providers are included when they have a default repo configured or a repo override is supplied.
+`search all` runs configured providers. Local notes are always included. HUMAN.md is included when available. Web is included when `BRAVE_SEARCH_API_KEY` is set. GitHub providers are included when they have a default repo configured or a repo override is supplied.
 
 ```bash
 # Search every configured provider
@@ -83,11 +83,11 @@ search web --json "mise tasks"
 
 ```bash
 search notes "frontmatter"
-search notes --source fold "modules init"
+search notes --source <module-name> "modules init"
 search human "obfuscated home"
 ```
 
-`notes` searches markdown in the agent's home and any available home modules. `human` is separate so async instructions do not silently mix into ordinary note searches. Available sources are shown by `search providers`.
+`notes` searches markdown in the agent's home and discovered modules under `home/modules/*`. `human` stays a separate provider even though `search all` includes it when available. Available sources are shown by `search providers`.
 
 ## Development
 

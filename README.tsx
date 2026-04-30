@@ -59,7 +59,7 @@ search providers`}</CodeBlock>
 
     <Section title="Providers">
       <List>
-        <Item><Code>notes</Code> — local markdown sources: home notes, plus fold/den modules when present</Item>
+        <Item><Code>notes</Code> — local markdown sources: home notes, plus discovered <Code>home/modules/*</Code> modules</Item>
         <Item><Code>human</Code> — Or's HUMAN.md via <Code>HUMAN_MD</Code> or <Code>SEARCH_SOURCE_HUMAN</Code></Item>
         <Item><Code>web</Code> — Brave Search API</Item>
         <Item><Code>issues</Code> — GitHub issues via <Code>gh search issues</Code></Item>
@@ -71,9 +71,9 @@ search providers`}</CodeBlock>
     <Section title="Blended search">
       <Paragraph>
         <Code>search all</Code> runs configured providers. Local notes are always
-        included. HUMAN.md is opt-in with <Code>--human</Code>. Web is included
-        when <Code>BRAVE_SEARCH_API_KEY</Code> is set. GitHub providers are
-        included when they have a default repo configured or a repo override is supplied.
+        included. HUMAN.md is included when available. Web is included when{" "}
+        <Code>BRAVE_SEARCH_API_KEY</Code> is set. GitHub providers are included
+        when they have a default repo configured or a repo override is supplied.
       </Paragraph>
 
       <CodeBlock lang="bash">{`# Search every configured provider
@@ -120,14 +120,14 @@ search web --json "mise tasks"`}</CodeBlock>
 
     <Section title="Local notes and HUMAN.md">
       <CodeBlock lang="bash">{`search notes "frontmatter"
-search notes --source fold "modules init"
+search notes --source <module-name> "modules init"
 search human "obfuscated home"`}</CodeBlock>
 
       <Paragraph>
-        <Code>notes</Code> searches markdown in the agent's home and any available
-        home modules. <Code>human</Code> is separate so async instructions do not
-        silently mix into ordinary note searches. Available sources are shown by{" "}
-        <Code>search providers</Code>.
+        <Code>notes</Code> searches markdown in the agent's home and discovered
+        modules under <Code>home/modules/*</Code>. <Code>human</Code> stays a
+        separate provider even though <Code>search all</Code> includes it when
+        available. Available sources are shown by <Code>search providers</Code>.
       </Paragraph>
     </Section>
 
