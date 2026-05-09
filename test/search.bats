@@ -220,3 +220,11 @@ MOCK
   [[ "$output" == *"web"* ]]
   [[ "$output" == *"SEARCH_ISSUES_DEFAULT_REPO"* ]]
 }
+
+@test "help task prints provider usage" {
+  run bash -c 'cd "$REPO_DIR" && CALLER_PWD="$CALLER_PWD" mise run -q help'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"search all [provider flags]"* ]]
+  [[ "$output" == *"Providers:"* ]]
+  [[ "$output" == *"SEARCH_WEB_LIMIT"* ]]
+}

@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#MISE description="Show search help"
+set -euo pipefail
+
+source "$MISE_CONFIG_ROOT/lib/common.sh"
+source "$MISE_CONFIG_ROOT/lib/search.sh"
+
+search_print_usage
